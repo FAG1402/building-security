@@ -119,7 +119,7 @@
 </head>
 <body>
     <header class="header">
-        <div class="header-left" onclick="window.location.href='index.html'">
+        <div class="header-left" onclick="window.location.href='Index.html'">
             <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5l6 4.5v9h-4v-5H10v5H6v-9l6-4.5z"/></svg>
             <h2 class="header-title">Achmad Sanusi</h2>
         </div>
@@ -331,52 +331,71 @@
                     if(confirm("Apakah Anda yakin ingin keluar?")) {
                         localStorage.removeItem("isLoggedIn");
                         localStorage.removeItem("adminUser");
-                        window.location.href = "index.html";
+                        window.location.href = "Index.html";
                     }
                 });
             }
 
-            // --- Manual Override (Sistem Toggle) ---
+            // =========================================
+            //  MANUAL OVERRIDE (Sinkronisasi Real-time)
+            // =========================================
             let statusPintuBuka = false;
             let statusLampuNyala = false;
 
+            // 1. Dengarkan status dari Firebase
+            database.ref('kontrol').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                // Sinkronisasi Status Pintu
+                if (data.door === "OPEN") {
+                    statusPintuBuka = true;
+                    if(doorBtn) {
+                        doorBtn.innerHTML = "🚪 KUNCI PINTU";
+                        doorBtn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+                    }
+                } else {
+                    statusPintuBuka = false;
+                    if(doorBtn) {
+                        doorBtn.innerHTML = "🚪 BUKA PINTU";
+                        doorBtn.style.background = ""; // Reset warna ke aslinya
+                    }
+                }
+
+                // Sinkronisasi Status Lampu
+                if (data.lampu === "ON") {
+                    statusLampuNyala = true;
+                    if(lampBtn) {
+                        lampBtn.innerHTML = "💡 MATIKAN LAMPU";
+                        lampBtn.style.background = "linear-gradient(135deg, #64748b, #475569)";
+                    }
+                } else {
+                    statusLampuNyala = false;
+                    if(lampBtn) {
+                        lampBtn.innerHTML = "💡 NYALAKAN LAMPU";
+                        lampBtn.style.background = "linear-gradient(135deg, #f59e0b, #d97706)";
+                    }
+                }
+            });
+
+            // 2. Fungsi Tombol yang Mengirim Perintah ke Firebase
             if (doorBtn) {
                 doorBtn.addEventListener("click", () => {
                     const perintah = statusPintuBuka ? 'CLOSE' : 'OPEN';
-                    
-                    database.ref('kontrol/door').set(perintah)
-                    .then(() => {
-                        statusPintuBuka = !statusPintuBuka; // Balikkan status
-                        
-                        // Ubah visual tombol
-                        doorBtn.innerHTML = statusPintuBuka ? "🚪 KUNCI PINTU" : "🚪 BUKA PINTU";
-                        doorBtn.style.background = statusPintuBuka ? "linear-gradient(135deg, #ef4444, #b91c1c)" : "";
-                        
-                        alert(`Perintah '${perintah}' terkirim!`);
-                    })
-                    .catch(e => alert("Gagal mengirim perintah: " + e.message));
+                    database.ref('kontrol/door').set(perintah).catch(e => alert("Gagal mengirim perintah pintu: " + e.message));
                 });
             }
 
             if (lampBtn) {
                 lampBtn.addEventListener("click", () => {
                     const perintah = statusLampuNyala ? 'OFF' : 'ON';
-                    
-                    database.ref('kontrol/lampu').set(perintah)
-                    .then(() => {
-                        statusLampuNyala = !statusLampuNyala; // Balikkan status
-                        
-                        // Ubah visual tombol
-                        lampBtn.innerHTML = statusLampuNyala ? "💡 MATIKAN LAMPU" : "💡 NYALAKAN LAMPU";
-                        lampBtn.style.background = statusLampuNyala ? "linear-gradient(135deg, #64748b, #475569)" : "linear-gradient(135deg, #f59e0b, #d97706)";
-                        
-                        alert(`Perintah '${perintah}' terkirim!`);
-                    })
-                    .catch(e => alert("Gagal mengirim perintah: " + e.message));
+                    database.ref('kontrol/lampu').set(perintah).catch(e => alert("Gagal mengirim perintah lampu: " + e.message));
                 });
             }
 
-            // --- Monitoring Sensor ---
+            // =========================================
+            //  MONITORING SENSOR
+            // =========================================
             database.ref('sensor').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (!data) return;
@@ -443,12 +462,10 @@
                         const key = childSnapshot.key;
                         const info = childSnapshot.val();
                         
-                        // FILTER INVALID DATE
                         if (!info.tanggal) return;
                         const dateObjStart = new Date(info.tanggal);
                         if (isNaN(dateObjStart.getTime())) return; 
                         
-                        // Cek apakah punya data tanggalSelesai, kalau tidak, anggap selesai 1 jam setelah mulai (untuk kompatibilitas data lama)
                         let dateObjEnd;
                         if (info.tanggalSelesai) {
                             dateObjEnd = new Date(info.tanggalSelesai);
@@ -456,14 +473,12 @@
                             dateObjEnd = new Date(dateObjStart.getTime() + (60 * 60 * 1000));
                         }
 
-                        // CEK APAKAH JADWAL HARI INI ATAU SEDANG BERLANGSUNG
                         const isToday = dateObjStart.getDate() === now.getDate() && 
                                         dateObjStart.getMonth() === now.getMonth() && 
                                         dateObjStart.getFullYear() === now.getFullYear();
                                         
                         const isOngoing = now.getTime() >= dateObjStart.getTime() && now.getTime() <= dateObjEnd.getTime();
 
-                        // HANYA TAMPILKAN JIKA JADWALNYA HARI INI ATAU SEDANG JALAN
                         if (isToday || isOngoing) {
                             hasTodayEvent = true;
                             
@@ -471,7 +486,6 @@
                             const jamMulai = dateObjStart.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
                             const jamSelesai = dateObjEnd.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
                             
-                            // LOGIKA AUTO-RESET (Event Terlewat Berdasarkan Waktu Selesai)
                             const isPassed = now.getTime() > dateObjEnd.getTime();
                             
                             if (isPassed && info.status === 'aktif') {
@@ -479,7 +493,6 @@
                                 info.status = 'nonaktif';
                             }
 
-                            // Pengaturan warna UI
                             const statusColor = (info.status === 'aktif' && !isPassed) ? '#10b981' : '#64748b';
                             const statusBg = (info.status === 'aktif' && !isPassed) ? '#d1fae5' : '#f1f5f9';
                             const opacity = isPassed ? '0.6' : '1';
