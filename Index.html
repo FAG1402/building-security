@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal - Achmad Sanusi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f1f5f9; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .header { width: 100%; height: 80px; background: linear-gradient(135deg, #dc2626, #991b1b); display: flex; align-items: center; padding: 0 3rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header-content { display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+        .header-icon { width: 40px; height: 40px; color: white; }
+        .header-title { font-size: 22px; color: white; font-weight: 600; letter-spacing: 0.5px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+        .title { font-size: 36px; font-weight: 700; color: #0f172a; margin-bottom: 3rem; text-align: center; letter-spacing: -0.5px; }
+        
+        .button-group { display: flex; flex-direction: column; gap: 1.25rem; width: 100%; max-width: 420px; }
+        .role-btn { width: 100%; height: 75px; background-color: white; border: 2px solid #e2e8f0; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .role-btn:hover { border-color: #0ea5e9; background-color: #f8fafc; transform: translateY(-3px); box-shadow: 0 12px 20px -8px rgba(14, 165, 233, 0.3); }
+        .role-btn:active { transform: translateY(-1px); }
+        .role-btn-text { font-size: 24px; color: #0f172a; font-weight: 700; letter-spacing: 1px; }
+
+        .animate-fade-in { animation: fadeIn 0.6s ease forwards; }
+        .animate-fade-up { opacity: 0; animation: fadeUp 0.6s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content" onclick="window.location.reload()">
+            <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5l6 4.5v9h-4v-5H10v5H6v-9l6-4.5z"/></svg>
+            <h2 class="header-title">Achmad Sanusi</h2>
+        </div>
+    </header>
+
+    <main class="main-content animate-fade-in">
+        <h1 class="title">Siapa Anda?</h1>
+        <div id="button-container" class="button-group"></div>
+    </main>
+
+    <script>
+        const roleOptions = [
+            { id: "admin", label: "ADMIN" },
+            { id: "reservasi", label: "RESERVASI" },
+        ];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const buttonContainer = document.getElementById("button-container");
+            roleOptions.forEach((option, index) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "role-btn animate-fade-up";
+                btn.style.animationDelay = `${index * 0.15}s`;
+
+                const spanText = document.createElement("span");
+                spanText.className = "role-btn-text";
+                spanText.textContent = option.label;
+                btn.appendChild(spanText);
+
+                btn.addEventListener("click", () => {
+                    if(option.id === "admin") window.location.href = "Login.html";
+                    else if(option.id === "reservasi") window.location.href = "Reservasi.html";
+                });
+                buttonContainer.appendChild(btn);
+            });
+        });
+    </script>
+</body>
+</html>

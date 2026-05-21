@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Dashboard - Achmad Sanusi</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Helvetica, sans-serif; }
+        body { background-color: #f1f5f9; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; }
+
+        .header { width: 100%; height: 80px; background: linear-gradient(135deg, #dc2626, #991b1b); display: flex; align-items: center; justify-content: space-between; padding: 0 3rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); z-index: 10; }
+        .header-left { display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+        .header-title { font-size: 22px; color: white; font-weight: 600; }
+        .header-icon { width: 40px; height: 40px; color: white; }
+        .header-right { display: flex; align-items: center; gap: 1.5rem; }
+
+        .profile-btn { background: white; border: none; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #475569; transition: all 0.2s; }
+        .profile-btn:hover { background-color: #f1f5f9; color: #dc2626; transform: scale(1.05); }
+
+        .main-content { flex: 1; padding: 2.5rem 3rem; display: flex; justify-content: center; }
+        .dashboard-card { background-color: white; border-radius: 28px; width: 100%; max-width: 1280px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 2rem; }
+        .dashboard-title { text-align: center; font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; }
+
+        .top-section { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+        
+        .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; height: 160px; overflow-y: auto; }
+        .info-box::-webkit-scrollbar { width: 6px; }
+        .info-box::-webkit-scrollbar-track { background: transparent; }
+        .info-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .res-item { background: white; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 12px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: opacity 0.3s; }
+        .res-details { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+        .res-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+        .res-date { font-size: 13px; font-weight: 600; color: #ef4444; }
+        .res-status { font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; width: fit-content; }
+        
+        .btn-edit-res { background: #f59e0b; color: white; border: none; border-radius: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; flex-shrink: 0; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); }
+        .btn-edit-res:hover { background: #d97706; transform: scale(1.05); }
+
+        .time-box { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 20px; padding: 1.5rem; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); height: 160px;}
+        .date-text { font-size: 16px; font-weight: 500; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .time-text { font-size: 42px; font-weight: 700; letter-spacing: -1px; color: #38bdf8; }
+
+        /* --- Area Tengah (Locator & Sensor Panel) --- */
+        .middle-section { display: grid; grid-template-columns: 1.8fr 1.2fr; gap: 2rem; }
+        
+        .locator-container { background-color: #0f172a; border-radius: 24px; min-height: 420px; display: flex; flex-direction: column; padding: 1.5rem; border: 4px solid #1e293b; position: relative; }
+        .locator-header { color: white; font-size: 18px; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .locator-header svg { width: 24px; height: 24px; color: #ef4444; }
+        
+        .map-area { display: flex; gap: 1rem; flex: 1; margin-bottom: 3.5rem; }
+        .zone { flex: 1; background-color: #1e293b; border: 3px dashed #475569; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .zone-title { font-size: 28px; font-weight: 800; z-index: 2; margin-bottom: 0.5rem; letter-spacing: 1px; }
+        .zone-desc { font-size: 15px; font-weight: 600; z-index: 2; }
+        
+        .zone.fire-active { background-color: #ef4444; border-color: #b91c1c; color: white; animation: firePulse 0.8s infinite alternate; }
+        @keyframes firePulse { 
+            from { box-shadow: inset 0 0 20px rgba(185, 28, 28, 0.5); } 
+            to { box-shadow: inset 0 0 60px rgba(127, 29, 29, 0.9); transform: scale(1.02); } 
+        }
+
+        .status-overlay { position: absolute; bottom: 20px; left: 20px; background-color: rgba(16, 185, 129, 0.9); backdrop-filter: blur(4px); border-radius: 12px; padding: 0.6rem 1.2rem; color: white; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background-color 0.3s; }
+        .status-overlay.danger { background-color: rgba(239, 68, 68, 0.9); }
+        .pulse-dot { width: 10px; height: 10px; background-color: #fff; border-radius: 50%; animation: pulse 1.5s infinite; }
+
+        .sensor-panel { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 24px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .sensor-panel-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; text-align: center; }
+        
+        .sensor-item { display: flex; flex-direction: column; gap: 0.25rem; }
+        .sensor-header { display: flex; align-items: center; gap: 0.5rem; font-size: 14px; font-weight: 700; color: #475569; }
+        .sensor-header svg { width: 18px; height: 18px; color: #64748b; }
+        
+        .sensor-bar { width: 100%; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); transition: background 0.3s; }
+        
+        .bar-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25); }
+        .bar-warning { background: linear-gradient(135deg, #f59e0b, #b45309); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25); }
+        .bar-safe { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); }
+        .bar-normal { background: linear-gradient(135deg, #64748b, #475569); }
+
+        .door-access-btn { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border-radius: 16px; width: 100%; height: 65px; font-size: 22px; font-weight: 700; border: none; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+        .door-access-btn:hover { background: linear-gradient(135deg, #334155, #1e293b); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25); }
+        .door-access-btn:active { transform: translateY(0); }
+
+        /* --- STYLING MODAL REVISI --- */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 1rem; animation: modalFade 0.3s ease-out; }
+        @keyframes modalFade { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; }
+        .modal-title { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .modal-close { font-size: 28px; background: none; border: none; cursor: pointer; color: #94a3b8; transition: color 0.2s; line-height: 1; }
+        .modal-close:hover { color: #ef4444; }
+        
+        .modal-form { display: flex; flex-direction: column; gap: 0.75rem; }
+        .modal-input-group { display: flex; flex-direction: column; gap: 0.3rem; }
+        .modal-label { font-size: 13px; font-weight: 700; color: #475569; }
+        .modal-input { width: 100%; height: 40px; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 0 1rem; font-size: 14px; outline: none; transition: all 0.3s; }
+        .modal-input:focus { border-color: #0ea5e9; background-color: white; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); }
+        .modal-textarea { width: 100%; height: 70px; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 0.5rem 1rem; font-size: 14px; resize: none; outline: none; transition: all 0.3s; }
+        .modal-select { width: 100%; height: 40px; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 0 1rem; font-size: 14px; font-weight: 700; outline: none; }
+        
+        .time-row-modal { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; }
+        .btn-modal-back { background-color: #cbd5e1; color: #334155; height: 40px; padding: 0 1.5rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-modal-back:hover { background-color: #94a3b8; }
+        .btn-modal-save { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; height: 40px; padding: 0 1.5rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(14, 165, 233, 0.2); transition: transform 0.2s; }
+        .btn-modal-save:hover { transform: translateY(-1px); }
+
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.6; } }
+
+        @media (max-width: 992px) { .top-section, .middle-section { grid-template-columns: 1fr; } .map-area { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left" onclick="window.location.href='Index.html'">
+            <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5l6 4.5v9h-4v-5H10v5H6v-9l6-4.5z"/></svg>
+            <h2 class="header-title">Achmad Sanusi</h2>
+        </div>
+        <div class="header-right">
+            <button class="profile-btn" id="btn-logout" title="Logout">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-card animate-fade-in">
+            <h1 class="dashboard-title">DASHBOARD MONITORING</h1>
+
+            <div class="top-section">
+                <div class="info-box" id="reservation-info">
+                    <div style="text-align:center; color:#94a3b8; margin-top:2rem;">Memuat jadwal...</div>
+                </div>
+                
+                <div class="time-box">
+                    <div class="date-text" id="current-date">-- -- ----</div>
+                    <div class="time-text" id="current-time">00 : 00</div>
+                </div>
+            </div>
+
+            <div class="middle-section">
+                
+                <div class="locator-container">
+                    <div class="locator-header">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.48 13.03c-.02-.19-.04-.38-.07-.56A8.995 8.995 0 0012 3a8.99 8.99 0 00-7.41 9.47c-.03.18-.05.37-.07.56C2.26 14.54 1 16.63 1 19c0 2.76 2.24 5 5 5h12c2.76 0 5-2.24 5-5 0-2.37-1.26-4.46-3.52-5.97zM6 22c-1.65 0-3-1.35-3-3 0-1.4.95-2.6 2.28-2.93l.87-.22.18-.88A7.008 7.008 0 0112 5a7.008 7.008 0 015.67 10.97l.18.88.87.22C20.05 16.4 21 17.6 21 19c0 1.65-1.35 3-3 3H6z"/></svg>
+                        Denah Lokasi Kebakaran
+                    </div>
+                    
+                    <div class="map-area">
+                        <div class="zone" id="zone-1">
+                            <div class="zone-title">TITIK 1</div>
+                            <div class="zone-desc">Area Ruang Utama</div>
+                        </div>
+                        <div class="zone" id="zone-2">
+                            <div class="zone-title">TITIK 2</div>
+                            <div class="zone-desc">Area Server / Gudang</div>
+                        </div>
+                    </div>
+
+                    <div class="status-overlay" id="global-status">
+                        <div class="pulse-dot"></div>
+                        <span id="global-status-text">STATUS: AMAN TERKENDALI</span>
+                    </div>
+                </div>
+
+                <div class="sensor-panel">
+                    <h2 class="sensor-panel-title">Data Komponen Sistem</h2>
+                    
+                    <div class="sensor-item">
+                        <div class="sensor-header">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                            Web Admin Control
+                        </div>
+                        <div class="sensor-bar bar-safe" id="sensor-admin">ONLINE / AKTIF</div>
+                    </div>
+
+                    <div class="sensor-item">
+                        <div class="sensor-header">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.48 13.03c-.02-.19-.04-.38-.07-.56A8.995 8.995 0 0012 3a8.99 8.99 0 00-7.41 9.47c-.03.18-.05.37-.07.56C2.26 14.54 1 16.63 1 19c0 2.76 2.24 5 5 5h12c2.76 0 5-2.24 5-5 0-2.37-1.26-4.46-3.52-5.97zM6 22c-1.65 0-3-1.35-3-3 0-1.4.95-2.6 2.28-2.93l.87-.22.18-.88A7.008 7.008 0 0112 5a7.008 7.008 0 015.67 10.97l.18.88.87.22C20.05 16.4 21 17.6 21 19c0 1.65-1.35 3-3 3H6z"/></svg>
+                            Smoke Sensor (Titik 1)
+                        </div>
+                        <div class="sensor-bar bar-safe" id="status-smoke-1">AMAN</div>
+                    </div>
+
+                    <div class="sensor-item">
+                        <div class="sensor-header">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.48 13.03c-.02-.19-.04-.38-.07-.56A8.995 8.995 0 0012 3a8.99 8.99 0 00-7.41 9.47c-.03.18-.05.37-.07.56C2.26 14.54 1 16.63 1 19c0 2.76 2.24 5 5 5h12c2.76 0 5-2.24 5-5 0-2.37-1.26-4.46-3.52-5.97zM6 22c-1.65 0-3-1.35-3-3 0-1.4.95-2.6 2.28-2.93l.87-.22.18-.88A7.008 7.008 0 0112 5a7.008 7.008 0 015.67 10.97l.18.88.87.22C20.05 16.4 21 17.6 21 19c0 1.65-1.35 3-3 3H6z"/></svg>
+                            Smoke Sensor (Titik 2)
+                        </div>
+                        <div class="sensor-bar bar-safe" id="status-smoke-2">AMAN</div>
+                    </div>
+                    
+                    <div class="sensor-item">
+                        <div class="sensor-header">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 4H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H3V6h18v12zM5 8h2v2H5V8zm4 0h10v2H9V8zm-4 4h2v2H5v-2zm4 0h10v2H9v-2zm-4 4h2v2H5v-2zm4 0h10v2H9v-2z"/></svg>
+                            RFID Tag Reader
+                        </div>
+                        <div class="sensor-bar bar-normal" id="sensor-rfid">MENUNGGU KARTU</div>
+                    </div>
+                    
+                    <div class="sensor-item">
+                        <div class="sensor-header">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4z"/></svg>
+                            PIR (Motion Sensor)
+                        </div>
+                        <div class="sensor-bar bar-normal" id="sensor-pir">TIDAK ADA GERAKAN</div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1.5rem; margin-top: 1.5rem;">
+                <button class="door-access-btn" id="door-btn" style="margin-top: 0; flex: 1;">
+                    🚪 BUKA PINTU
+                </button>
+                <button class="door-access-btn" id="lamp-btn" style="margin-top: 0; flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                    💡 NYALAKAN LAMPU
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="revisi-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">⚙️ Form Revisi Reservasi</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <form id="form-revisi" class="modal-form">
+                <input type="hidden" id="revisi-key">
+                <div class="modal-input-group">
+                    <label class="modal-label" for="revisi-email">Email Penanggung Jawab</label>
+                    <input type="email" id="revisi-email" class="modal-input" required>
+                </div>
+                <div class="modal-input-group">
+                    <label class="modal-label" for="revisi-acara">Nama Acara</label>
+                    <input type="text" id="revisi-acara" class="modal-input" required>
+                </div>
+                
+                <div class="time-row-modal">
+                    <div class="modal-input-group">
+                        <label class="modal-label" for="revisi-tanggal">Waktu Mulai</label>
+                        <input type="datetime-local" id="revisi-tanggal" class="modal-input" required>
+                    </div>
+                    <div class="modal-input-group">
+                        <label class="modal-label" for="revisi-tanggal-selesai">Waktu Selesai</label>
+                        <input type="datetime-local" id="revisi-tanggal-selesai" class="modal-input" required>
+                    </div>
+                </div>
+
+                <div class="modal-input-group">
+                    <label class="modal-label" for="revisi-catatan">Catatan Tambahan</label>
+                    <textarea id="revisi-catatan" class="modal-textarea"></textarea>
+                </div>
+                <div class="modal-input-group">
+                    <label class="modal-label" for="revisi-status">Status Akses Sistem</label>
+                    <select id="revisi-status" class="modal-select">
+                        <option value="aktif">AKTIF</option>
+                        <option value="nonaktif">NONAKTIF</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-back" id="btn-modal-batal">Batal</button>
+                    <button type="submit" class="btn-modal-save">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Cek "Tiket Masuk"
+        if (localStorage.getItem("isLoggedIn") !== "true") {
+            alert("Akses Ditolak! Anda harus login terlebih dahulu.");
+            window.location.href = "Login.html";
+        }
+        
+        // 1. KONFIGURASI FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqTQl8gjxM3_Cv7WjkA3UUhdbaNWPneAs",
+            databaseURL: "https://buildingsecuritysystem-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const timeElement = document.getElementById("current-time");
+            const dateElement = document.getElementById("current-date");
+            
+            const btnLogout = document.getElementById("btn-logout");
+            const doorBtn = document.getElementById("door-btn");
+            const lampBtn = document.getElementById("lamp-btn");
+            const resInfoContainer = document.getElementById("reservation-info");
+            
+            const zone1 = document.getElementById('zone-1');
+            const zone2 = document.getElementById('zone-2');
+            const statusSmoke1 = document.getElementById('status-smoke-1');
+            const statusSmoke2 = document.getElementById('status-smoke-2');
+            const globalStatus = document.getElementById('global-status');
+            const globalStatusText = document.getElementById('global-status-text');
+            const statusRfid = document.getElementById('sensor-rfid');
+            const statusPir = document.getElementById('sensor-pir');
+
+            const revisiModal = document.getElementById("revisi-modal");
+            const closeModalBtn = document.getElementById("close-modal");
+            const btnModalBatal = document.getElementById("btn-modal-batal");
+            const formRevisi = document.getElementById("form-revisi");
+
+            // --- Waktu Realtime ---
+            function updateTime() {
+                const now = new Date();
+                let hours = now.getHours().toString().padStart(2, '0');
+                let minutes = now.getMinutes().toString().padStart(2, '0');
+                timeElement.textContent = `${hours} : ${minutes}`;
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                dateElement.textContent = now.toLocaleDateString('id-ID', options);
+            }
+            setInterval(updateTime, 1000);
+            updateTime();
+
+            // --- Logika Logout ---
+            if(btnLogout) {
+                btnLogout.addEventListener("click", () => {
+                    if(confirm("Apakah Anda yakin ingin keluar?")) {
+                        localStorage.removeItem("isLoggedIn");
+                        localStorage.removeItem("adminUser");
+                        window.location.href = "Index.html";
+                    }
+                });
+            }
+
+            // --- Manual Override (Sistem Toggle) ---
+            let statusPintuBuka = false;
+            let statusLampuNyala = false;
+
+            if (doorBtn) {
+                doorBtn.addEventListener("click", () => {
+                    const perintah = statusPintuBuka ? 'CLOSE' : 'OPEN';
+                    
+                    database.ref('kontrol/door').set(perintah)
+                    .then(() => {
+                        statusPintuBuka = !statusPintuBuka; // Balikkan status
+                        
+                        // Ubah visual tombol
+                        doorBtn.innerHTML = statusPintuBuka ? "🚪 KUNCI PINTU" : "🚪 BUKA PINTU";
+                        doorBtn.style.background = statusPintuBuka ? "linear-gradient(135deg, #ef4444, #b91c1c)" : "";
+                        
+                        alert(`Perintah '${perintah}' terkirim!`);
+                    })
+                    .catch(e => alert("Gagal mengirim perintah: " + e.message));
+                });
+            }
+
+            if (lampBtn) {
+                lampBtn.addEventListener("click", () => {
+                    const perintah = statusLampuNyala ? 'OFF' : 'ON';
+                    
+                    database.ref('kontrol/lampu').set(perintah)
+                    .then(() => {
+                        statusLampuNyala = !statusLampuNyala; // Balikkan status
+                        
+                        // Ubah visual tombol
+                        lampBtn.innerHTML = statusLampuNyala ? "💡 MATIKAN LAMPU" : "💡 NYALAKAN LAMPU";
+                        lampBtn.style.background = statusLampuNyala ? "linear-gradient(135deg, #64748b, #475569)" : "linear-gradient(135deg, #f59e0b, #d97706)";
+                        
+                        alert(`Perintah '${perintah}' terkirim!`);
+                    })
+                    .catch(e => alert("Gagal mengirim perintah: " + e.message));
+                });
+            }
+
+            // --- Monitoring Sensor ---
+            database.ref('sensor').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                let fireDetected = false;
+
+                if (data.smoke1 === true) {
+                    zone1.classList.add('fire-active');
+                    statusSmoke1.className = 'sensor-bar bar-danger';
+                    statusSmoke1.textContent = 'BAHAYA ASAP!';
+                    fireDetected = true;
+                } else {
+                    zone1.classList.remove('fire-active');
+                    statusSmoke1.className = 'sensor-bar bar-safe';
+                    statusSmoke1.textContent = 'AMAN';
+                }
+
+                if (data.smoke2 === true) {
+                    zone2.classList.add('fire-active');
+                    statusSmoke2.className = 'sensor-bar bar-danger';
+                    statusSmoke2.textContent = 'BAHAYA ASAP!';
+                    fireDetected = true;
+                } else {
+                    zone2.classList.remove('fire-active');
+                    statusSmoke2.className = 'sensor-bar bar-safe';
+                    statusSmoke2.textContent = 'AMAN';
+                }
+
+                if (fireDetected) {
+                    globalStatus.classList.add('danger');
+                    globalStatusText.textContent = "STATUS: PERINGATAN KEBAKARAN!";
+                } else {
+                    globalStatus.classList.remove('danger');
+                    globalStatusText.textContent = "STATUS: AMAN TERKENDALI";
+                }
+
+                if (data.rfid && data.rfid !== "MENUNGGU KARTU") {
+                    statusRfid.className = 'sensor-bar bar-warning';
+                    statusRfid.textContent = "UID: " + data.rfid;
+                } else {
+                    statusRfid.className = 'sensor-bar bar-normal';
+                    statusRfid.textContent = "MENUNGGU KARTU";
+                }
+
+                if (data.pir === true) {
+                    statusPir.className = 'sensor-bar bar-warning';
+                    statusPir.textContent = "GERAKAN TERDETEKSI";
+                } else {
+                    statusPir.className = 'sensor-bar bar-normal';
+                    statusPir.textContent = "TIDAK ADA GERAKAN";
+                }
+            });
+
+            // =========================================
+            //  MENAMPILKAN JADWAL (HANYA HARI INI) + AUTO RESET DURASI
+            // =========================================
+            database.ref('reservasi').orderByChild('tanggal').on('value', (snapshot) => {
+                resInfoContainer.innerHTML = ""; 
+                let hasTodayEvent = false;
+                const now = new Date(); 
+                
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const key = childSnapshot.key;
+                        const info = childSnapshot.val();
+                        
+                        // FILTER INVALID DATE
+                        if (!info.tanggal) return;
+                        const dateObjStart = new Date(info.tanggal);
+                        if (isNaN(dateObjStart.getTime())) return; 
+                        
+                        // Cek apakah punya data tanggalSelesai, kalau tidak, anggap selesai 1 jam setelah mulai (untuk kompatibilitas data lama)
+                        let dateObjEnd;
+                        if (info.tanggalSelesai) {
+                            dateObjEnd = new Date(info.tanggalSelesai);
+                        } else {
+                            dateObjEnd = new Date(dateObjStart.getTime() + (60 * 60 * 1000));
+                        }
+
+                        // CEK APAKAH JADWAL HARI INI ATAU SEDANG BERLANGSUNG
+                        const isToday = dateObjStart.getDate() === now.getDate() && 
+                                        dateObjStart.getMonth() === now.getMonth() && 
+                                        dateObjStart.getFullYear() === now.getFullYear();
+                                        
+                        const isOngoing = now.getTime() >= dateObjStart.getTime() && now.getTime() <= dateObjEnd.getTime();
+
+                        // HANYA TAMPILKAN JIKA JADWALNYA HARI INI ATAU SEDANG JALAN
+                        if (isToday || isOngoing) {
+                            hasTodayEvent = true;
+                            
+                            const formattedDate = dateObjStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                            const jamMulai = dateObjStart.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
+                            const jamSelesai = dateObjEnd.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
+                            
+                            // LOGIKA AUTO-RESET (Event Terlewat Berdasarkan Waktu Selesai)
+                            const isPassed = now.getTime() > dateObjEnd.getTime();
+                            
+                            if (isPassed && info.status === 'aktif') {
+                                database.ref('reservasi/' + key).update({ status: 'nonaktif' });
+                                info.status = 'nonaktif';
+                            }
+
+                            // Pengaturan warna UI
+                            const statusColor = (info.status === 'aktif' && !isPassed) ? '#10b981' : '#64748b';
+                            const statusBg = (info.status === 'aktif' && !isPassed) ? '#d1fae5' : '#f1f5f9';
+                            const opacity = isPassed ? '0.6' : '1';
+                            const labelStatus = isPassed ? 'SELESAI' : info.status.toUpperCase();
+
+                            const itemHtml = `
+                                <div class="res-item" style="opacity: ${opacity};">
+                                    <div class="res-details">
+                                        <div class="res-title">${info.acara}</div>
+                                        <div class="res-date">📅 ${formattedDate} (${jamMulai} - ${jamSelesai} WIB)</div>
+                                        <div class="res-status" style="color: ${statusColor}; background: ${statusBg};">${labelStatus}</div>
+                                    </div>
+                                    <button class="btn-edit-res" title="Revisi Jadwal" onclick="bukaModalRevisi('${key}')">⚙️</button>
+                                </div>
+                            `;
+                            resInfoContainer.insertAdjacentHTML('beforeend', itemHtml);
+                        }
+                    });
+                } 
+                
+                if (!hasTodayEvent) {
+                    resInfoContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; margin-top:2rem; font-weight:600;">Belum Ada Jadwal Hari Ini</div>`;
+                }
+            });
+
+            // =========================================
+            //  LOGIKA OPERASIONAL MODAL REVISI
+            // =========================================
+            window.bukaModalRevisi = function(key) {
+                database.ref('reservasi/' + key).once('value')
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        document.getElementById("revisi-key").value = key;
+                        document.getElementById("revisi-email").value = data.email || "";
+                        document.getElementById("revisi-acara").value = data.acara || "";
+                        
+                        document.getElementById("revisi-tanggal").value = data.tanggal || ""; 
+                        document.getElementById("revisi-tanggal-selesai").value = data.tanggalSelesai || data.tanggal || ""; 
+                        
+                        document.getElementById("revisi-catatan").value = data.catatan || "";
+                        document.getElementById("revisi-status").value = data.status || "nonaktif";
+                        
+                        revisiModal.style.display = "flex";
+                    }
+                })
+                .catch((error) => alert("Gagal memuat data: " + error.message));
+            };
+
+            const tutupModal = () => { revisiModal.style.display = "none"; };
+            closeModalBtn.addEventListener("click", tutupModal);
+            btnModalBatal.addEventListener("click", tutupModal);
+
+            formRevisi.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const key = document.getElementById("revisi-key").value;
+                
+                const tglMulai = document.getElementById("revisi-tanggal").value;
+                const tglSelesai = document.getElementById("revisi-tanggal-selesai").value;
+
+                if (new Date(tglSelesai).getTime() <= new Date(tglMulai).getTime()) {
+                    alert("Gagal: Waktu selesai acara tidak boleh sama atau lebih awal dari waktu mulai!");
+                    return;
+                }
+
+                const dataDiperbarui = {
+                    email: document.getElementById("revisi-email").value,
+                    acara: document.getElementById("revisi-acara").value,
+                    tanggal: tglMulai,
+                    tanggalSelesai: tglSelesai,
+                    catatan: document.getElementById("revisi-catatan").value,
+                    status: document.getElementById("revisi-status").value
+                };
+
+                database.ref('reservasi/' + key).update(dataDiperbarui)
+                .then(() => {
+                    alert("Jadwal reservasi berhasil diperbarui!");
+                    tutupModal();
+                })
+                .catch((error) => alert("Gagal menyimpan ke database: " + error.message));
+            });
+        });
+    </script>
+</body>
+</html>

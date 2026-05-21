@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Reservasi - Achmad Sanusi</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f1f5f9; color: #0f172a; min-height: 100vh; display: flex; flex-direction: column; }
+
+        .header { width: 100%; height: 80px; background: linear-gradient(135deg, #dc2626, #991b1b); display: flex; align-items: center; padding: 0 3rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header-content { display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+        .header-icon { width: 40px; height: 40px; color: white; }
+        .header-title { font-size: 22px; color: white; font-weight: 600; }
+
+        .main-content { flex: 1; padding: 3rem 2rem; display: flex; justify-content: center; align-items: center; }
+        
+        .reservation-container { background: white; width: 100%; max-width: 1000px; border-radius: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: grid; grid-template-columns: 1.2fr 1fr; overflow: hidden; }
+        
+        .form-section { padding: 3rem; }
+        .form-title { font-size: 24px; font-weight: 800; margin-bottom: 2rem; color: #1e293b; letter-spacing: -0.5px; }
+        
+        .reservation-form { display: flex; flex-direction: column; gap: 1.2rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .input-label { font-size: 14px; font-weight: 700; color: #475569; }
+        
+        .input-field { width: 100%; height: 46px; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 0 1rem; font-size: 15px; color: #0f172a; outline: none; transition: all 0.3s; }
+        .input-field:focus, .textarea-field:focus { border-color: #0ea5e9; background-color: white; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15); }
+
+        .textarea-field { width: 100%; height: 90px; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 1rem; font-size: 15px; resize: none; outline: none; transition: all 0.3s; }
+
+        .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .submit-btn { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; width: 100%; height: 50px; border-radius: 10px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); transition: all 0.3s; margin-top: 0.5rem; }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(6, 182, 212, 0.4); }
+
+        .calendar-section { background-color: #f8fafc; padding: 3rem; border-left: 2px solid #e2e8f0; display: flex; flex-direction: column; }
+        .calendar-title { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        
+        .booked-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; padding-right: 0.5rem; max-height: 450px; }
+        .booked-item { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .booked-date { font-size: 13px; font-weight: 700; color: #ef4444; margin-bottom: 0.25rem; }
+        .booked-event { font-size: 16px; font-weight: 600; color: #1e293b; }
+        .booked-contact { font-size: 12px; font-weight:700; margin-top: 0.5rem; }
+
+        .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .booked-list::-webkit-scrollbar { width: 6px; }
+        .booked-list::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .booked-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        @media (max-width: 860px) { .reservation-container { grid-template-columns: 1fr; } .calendar-section { border-left: none; border-top: 2px solid #e2e8f0; } .time-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content" onclick="window.location.href='Index.html'">
+            <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5l6 4.5v9h-4v-5H10v5H6v-9l6-4.5z"/></svg>
+            <h2 class="header-title">Achmad Sanusi</h2>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="reservation-container animate-fade-in">
+            
+            <div class="form-section">
+                <h2 class="form-title">PENJADWALAN RESERVASI</h2>
+                <form class="reservation-form" id="form-reservasi">
+                    <div class="input-group">
+                        <label for="email" class="input-label">Email Penanggung Jawab</label>
+                        <input type="email" id="email" class="input-field" required placeholder="contoh@gmail.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="acara" class="input-label">Nama Acara</label>
+                        <input type="text" id="acara" class="input-field" required placeholder="Contoh: Rapat Evaluasi Bulanan">
+                    </div>
+                    
+                    <div class="time-row">
+                        <div class="input-group">
+                            <label for="tanggal-mulai" class="input-label">Waktu Mulai</label>
+                            <input type="datetime-local" id="tanggal-mulai" class="input-field" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="tanggal-selesai" class="input-label">Waktu Selesai</label>
+                            <input type="datetime-local" id="tanggal-selesai" class="input-field" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="catatan" class="input-label">Catatan Tambahan (Opsional)</label>
+                        <textarea id="catatan" class="textarea-field" placeholder="Tulis instruksi khusus..."></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn" id="btn-submit">KIRIM RESERVASI</button>
+                </form>
+            </div>
+
+            <div class="calendar-section">
+                <h3 class="calendar-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+                    Jadwal Mendatang
+                </h3>
+                <div class="booked-list" id="booked-list">
+                    <p style="color:#64748b; font-size:14px; text-align:center; margin-top:2rem;">Memuat jadwal dari sistem...</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqTQl8gjxM3_Cv7WjkA3UUhdbaNWPneAs",
+            databaseURL: "https://buildingsecuritysystem-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const bookedListContainer = document.getElementById("booked-list");
+            let arrJadwalTerisi = []; 
+
+            database.ref('reservasi').orderByChild('tanggal').on('value', (snapshot) => {
+                bookedListContainer.innerHTML = ""; 
+                arrJadwalTerisi = []; 
+                const now = new Date();
+
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const data = childSnapshot.val();
+                        if (!data.tanggal || !data.tanggalSelesai) return; // Skip data error
+                        
+                        const dateStart = new Date(data.tanggal);
+                        const dateEnd = new Date(data.tanggalSelesai);
+                        
+                        // Hanya tampilkan yang belum kedaluwarsa di UI kalender publik
+                        if (now.getTime() > dateEnd.getTime()) return;
+
+                        const formatTgl = dateStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const jamMulai = dateStart.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
+                        const jamSelesai = dateEnd.toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' });
+
+                        arrJadwalTerisi.push(data.tanggal.substring(0, 10)); // Untuk cek bentrok hari
+
+                        const statusColor = data.status === 'aktif' ? '#10b981' : '#f59e0b';
+                        const itemHtml = `
+                            <div class="booked-item">
+                                <div class="booked-date">${formatTgl} (${jamMulai} - ${jamSelesai} WIB)</div>
+                                <div class="booked-event">${data.acara}</div>
+                                <div class="booked-contact" style="color:${statusColor}">Status: ${data.status.toUpperCase()}</div>
+                            </div>
+                        `;
+                        bookedListContainer.insertAdjacentHTML('beforeend', itemHtml);
+                    });
+                }
+                
+                if (bookedListContainer.innerHTML === "") {
+                    bookedListContainer.innerHTML = '<p style="color:#64748b; font-size:14px; text-align:center; margin-top:2rem;">Belum ada jadwal aktif.</p>';
+                }
+            });
+
+            const formReservasi = document.getElementById("form-reservasi");
+            const submitBtn = document.getElementById("btn-submit");
+
+            formReservasi.addEventListener("submit", (event) => {
+                event.preventDefault();
+
+                const tanggalMulai = document.getElementById("tanggal-mulai").value;
+                const tanggalSelesai = document.getElementById("tanggal-selesai").value;
+                
+                // Validasi Durasi (Selesai harus > Mulai)
+                if (new Date(tanggalSelesai).getTime() <= new Date(tanggalMulai).getTime()) {
+                    alert("Gagal: Waktu selesai acara tidak boleh sama atau lebih awal dari waktu mulai!");
+                    return;
+                }
+
+                const tanggalHanyaHari = tanggalMulai.substring(0, 10);
+                if (arrJadwalTerisi.includes(tanggalHanyaHari)) {
+                    const konfirmasi = confirm("Peringatan: Sudah ada acara lain di tanggal ini. Lanjutkan reservasi?");
+                    if (!konfirmasi) return; 
+                }
+
+                submitBtn.textContent = "MEMPROSES...";
+                submitBtn.style.pointerEvents = "none";
+
+                database.ref('reservasi').push({
+                    email: document.getElementById("email").value,
+                    acara: document.getElementById("acara").value,
+                    tanggal: tanggalMulai,
+                    tanggalSelesai: tanggalSelesai,
+                    catatan: document.getElementById("catatan").value,
+                    status: "nonaktif",
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                })
+                .then(() => {
+                    window.location.href = "Reservasi-completed.html";
+                })
+                .catch((error) => {
+                    alert("Kesalahan database: " + error.message);
+                    submitBtn.textContent = "KIRIM RESERVASI";
+                    submitBtn.style.pointerEvents = "auto";
+                });
+            });
+        });
+    </script>
+</body>
+</html>
