@@ -164,6 +164,23 @@
                         </div>
                     </div>
 
+                    <div id="emergency-map-container" style="display: none; flex-direction: column; gap: 10px; margin-bottom: 2rem; animation: fadeIn 0.5s;">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3961.2289944384815!2d107.5928678!3d-6.8631375!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e68e695eca7270b%3A0xd235a025d5fd8b47!2sGedung%20Achmad%20Sanusi%20UPI!5e0!3m2!1sid!2sid!4v1779416196002!5m2!1sid!2sid" 
+                            width="100%" 
+                            height="220" 
+                            style="border:0; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                        <a href="https://maps.app.goo.gl/5siumM9bBT9P5E4aA" 
+                           target="_blank" 
+                           style="display: flex; align-items: center; justify-content: center; padding: 12px; background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; text-decoration: none; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); transition: transform 0.2s;">
+                          🚨 BUKA NAVIGASI RUTE DAMKAR
+                        </a>
+                    </div>
+
                     <div class="status-overlay" id="global-status">
                         <div class="pulse-dot"></div>
                         <span id="global-status-text">STATUS: AMAN TERKENDALI</span>
@@ -307,6 +324,8 @@
             const globalStatusText = document.getElementById('global-status-text');
             const statusRfid = document.getElementById('sensor-rfid');
             const statusPir = document.getElementById('sensor-pir');
+            
+            const emergencyMap = document.getElementById('emergency-map-container'); // TAMBAHAN PETA
 
             const revisiModal = document.getElementById("revisi-modal");
             const closeModalBtn = document.getElementById("close-modal");
@@ -394,7 +413,7 @@
             }
 
             // =========================================
-            //  MONITORING SENSOR
+            //  MONITORING SENSOR & PETA DARURAT
             // =========================================
             database.ref('sensor').on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -424,12 +443,15 @@
                     statusSmoke2.textContent = 'AMAN';
                 }
 
+                // Logika memunculkan Peta Darurat
                 if (fireDetected) {
                     globalStatus.classList.add('danger');
                     globalStatusText.textContent = "STATUS: PERINGATAN KEBAKARAN!";
+                    emergencyMap.style.display = "flex";
                 } else {
                     globalStatus.classList.remove('danger');
                     globalStatusText.textContent = "STATUS: AMAN TERKENDALI";
+                    emergencyMap.style.display = "none";
                 }
 
                 if (data.rfid && data.rfid !== "MENUNGGU KARTU") {
